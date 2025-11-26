@@ -41,6 +41,11 @@ type AuthRepository interface {
 
 	// Password reset
 	ResetUserPassword(userID string, hashedPassword string) error
+
+	// User locations (sedes asignadas)
+	GetUserLocations(userID string) ([]string, error) // Returns location IDs
+	AssignLocationToUser(userID string, locationID string) error
+	RemoveLocationFromUser(userID string, locationID string) error
 }
 
 type authRepository struct {
@@ -436,6 +441,59 @@ func (r *authRepository) UpdateUserPassword(userID string, hashedPassword string
 	`
 
 	_, err := r.db.Exec(query, hashedPassword, userID)
+	return err
+}
+
+// ================================================
+// User locations operations
+// ================================================
+
+// GetUserLocations returns all location IDs assigned to a user
+func (r *authRepository) GetUserLocations(userID string) ([]string, error) {
+	query := `
+		SELECT location_id
+		FROM bar_system.user_locations
+		WHERE user_id = $1
+	`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var locationIDs []string
+	for rows.Next() {
+		var locationID string
+		if err := rows.Scan(&locationID); err != nil {
+			return nil, err
+		}
+		locationIDs = append(locationIDs, locationID)
+	}
+
+	return locationIDs, nil
+}
+
+// AssignLocationToUser assigns a location to a user
+func (r *authRepository) AssignLocationToUser(userID string, locationID string) error {
+	query := `
+		INSERT INTO bar_system.user_locations (user_id, location_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, location_id) DO NOTHING
+	`
+
+	_, err := r.db.Exec(query, userID, locationID)
+	return err
+}
+
+// RemoveLocationFromUser removes a location assignment from a user
+func (r *authRepository) RemoveLocationFromUser(userID string, locationID string) error {
+	query := `
+		DELETE FROM bar_system.user_locations
+		WHERE user_id = $1 AND location_id = $2
+	`
+
+	_, err := r.db.Exec(query, userID, locationID)
 	return err
 }
 

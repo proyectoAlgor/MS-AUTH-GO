@@ -42,6 +42,11 @@ type AuthService interface {
 
 	// User password change (self-service)
 	ChangeUserPassword(userID string, currentPassword, newPassword string) error
+
+	// User locations (sedes asignadas)
+	GetUserLocations(userID string) ([]string, error)
+	AssignLocationToUser(userID string, locationID string) error
+	RemoveLocationFromUser(userID string, locationID string) error
 }
 
 type authService struct {
@@ -479,6 +484,40 @@ func (s *authService) ChangeUserPassword(userID string, currentPassword, newPass
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
+	return nil
+}
+
+// ================================================
+// User locations methods
+// ================================================
+
+func (s *authService) GetUserLocations(userID string) ([]string, error) {
+	locationIDs, err := s.repo.GetUserLocations(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user locations: %w", err)
+	}
+	return locationIDs, nil
+}
+
+func (s *authService) AssignLocationToUser(userID string, locationID string) error {
+	// Verificar que el usuario existe
+	_, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	err = s.repo.AssignLocationToUser(userID, locationID)
+	if err != nil {
+		return fmt.Errorf("failed to assign location: %w", err)
+	}
+	return nil
+}
+
+func (s *authService) RemoveLocationFromUser(userID string, locationID string) error {
+	err := s.repo.RemoveLocationFromUser(userID, locationID)
+	if err != nil {
+		return fmt.Errorf("failed to remove location: %w", err)
+	}
 	return nil
 }
 

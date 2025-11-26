@@ -91,6 +91,11 @@ func main() {
 
 		// Password reset (admin only)
 		admin.POST("/users/:id/reset-password", authHandler.ResetPassword)
+
+		// Location assignment (admin only)
+		admin.GET("/users/:id/locations", authHandler.GetUserLocations)
+		admin.POST("/users/:id/locations", authHandler.AssignLocation)
+		admin.DELETE("/users/:id/locations/:locationId", authHandler.RemoveLocation)
 	}
 
 	log.Printf("MS-AUTH-BAR starting on port %s", port)

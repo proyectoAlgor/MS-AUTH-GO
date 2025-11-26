@@ -107,9 +107,17 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
+	// Get user locations (sedes asignadas)
+	locationIDs, err := h.authService.GetUserLocations(userID)
+	if err != nil {
+		// Log error but don't fail - locations might not be assigned yet
+		locationIDs = []string{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"user":  user,
-		"roles": roles,
+		"user":         user,
+		"roles":        roles,
+		"location_ids": locationIDs,
 	})
 }
 
@@ -302,4 +310,67 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
+}
+
+// ================================================
+// User locations handlers
+// ================================================
+
+func (h *AuthHandler) GetUserLocations(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	locationIDs, err := h.authService.GetUserLocations(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"location_ids": locationIDs})
+}
+
+func (h *AuthHandler) AssignLocation(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	var req struct {
+		LocationID string `json:"location_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.authService.AssignLocationToUser(userID, req.LocationID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Location assigned successfully"})
+}
+
+func (h *AuthHandler) RemoveLocation(c *gin.Context) {
+	userID := c.Param("id")
+	locationID := c.Param("locationId")
+
+	if userID == "" || locationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID and Location ID are required"})
+		return
+	}
+
+	err := h.authService.RemoveLocationFromUser(userID, locationID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Location removed successfully"})
 }
